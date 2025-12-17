@@ -10,8 +10,7 @@ function App() {
         <FractalApp/>
 
       </header>
-      <body className="App-body">  
-      </body>     
+      
     </div>
   );
 }
