@@ -7,9 +7,18 @@
   pointer-events: none;
 }
 
+button{
+  margin: 10px;
+  width: 100px;
+}
+
+.inputbox{
+  border-left: solid;
+  border-color: green;
+}
+
 #theGoodStuff{
   display: flex;
-  ;
 }
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {

@@ -9,15 +9,15 @@ function FractalCanvas({
   mode,
   coloringFunctionManager,
   redraw,
-  triggerRedraw,
+  colorChange,
   maxSeqLength,
   renderingFunctionManager,
 }) {
   // Canvas level params
   const canvasRef = useRef(null);
   const size = 500;
-  const span = 1;
-  const origin = [0, -0];
+  const span = 0.5;
+  const origin = [-1, 0];
   const inc = span / size;
 
   const [cursX, setCursx] = useState(0);
@@ -117,8 +117,14 @@ function FractalCanvas({
   useEffect(() => {
     if (mode === 0) juliaSet(cursX, cursY);
     else mandelbrotSet();
-  }, [mode, redraw, maxSeqLength, cursX, cursY, coloringFunctionManager]);
+  }, [mode, redraw, maxSeqLength, cursX, cursY]);
 
+  useEffect(() =>{
+    if (mode === 0) juliaSet(cursX, cursY);
+    else mandelbrotSet();
+
+
+  },[colorChange])
   return (
     <canvas
       ref={canvasRef}
@@ -142,6 +148,8 @@ function FractalController({
   coloringFunctionManager,
   redraw,
   triggerRedraw,
+  colorChange,
+  triggerColorChange,
   maxSeqLength,
   setMaxSeqLength,
   renderingFunctionManager,
@@ -152,12 +160,13 @@ function FractalController({
 
   const changeColor = () => {
     coloringFunctionManager.current.next_color();
-    triggerRedraw(() => redraw + 1);
+    triggerColorChange(() => colorChange + 1);
+
   };
 
   const invertColor = () => {
     coloringFunctionManager.current.invert_coloring_function();
-    triggerRedraw(() => redraw + 1);
+    triggerColorChange(() => colorChange + 1);
   };
 
   const changeMaxSeqLength = (newSequenceLength) => {
@@ -169,18 +178,48 @@ function FractalController({
     triggerRedraw(() => redraw + 1);
   };
 
-  return (
-    <div>
-      <button onClick={changeMode}>
-        Switch to {mode === 0 ? "Mandelbrot" : "Julia"} Set
-      </button>
-      <button onClick={changeColor}>Change Color Function</button>
-      <button onClick={invertColor}>Invert Colors</button>
-      <button onClick={changeRenderingFunction}>
-        Change Rendering Function
-      </button>
+  const modeName = () =>{
+    if( mode == 0){
+      return "Julia"
+    }
+    return "Mandlebrot"
+  }
 
-      <div>
+  return (
+    
+
+    <div style={{display:"flex", flexDirection:"row" , justifyContent:"space-between",margin:"20px"}}>
+      
+      <div >
+        <div className="inputbox" style={{display: "flex"}}>
+          <button onClick={changeMode} >
+            change mode
+          </button>
+          <p>
+            {modeName()} mode
+          </p>
+
+        </div>
+
+        <div className="inputbox" style={{display: "flex"}}>
+          <button onClick={changeColor}>Change Color Function</button>
+          <button onClick={invertColor}>Invert Colors</button>
+          <p>
+            Color Function: {coloringFunctionManager.current.names[coloringFunctionManager.current.function_state]}
+          </p>
+        </div>
+        
+        <div className="inputbox" style={{display: "flex"}}>
+        
+          <button onClick={changeRenderingFunction}>
+            Change Rendering Function
+          </button>
+
+        </div>
+
+      </div>
+
+      <div className="inputbox">
         <p>Sequence Depth = {maxSeqLength}</p>
         <input
           type="range"
@@ -191,12 +230,14 @@ function FractalController({
           style={{ width: "100%" }}
         />
       </div>
+
     </div>
   );
 }
 
 function FractalApp() {
   const [redraw, triggerRedraw] = useState(0);
+  const [colorChange, triggerColorChange] = useState(0)
   const [mode, setMode] = useState(0);
   const coloringFunction = useRef(new ColoringFunctionManager());
   const [maxSeqLength, setMaxSeqLength] = useState(100);
@@ -209,6 +250,8 @@ function FractalApp() {
         setMode={setMode}
         redraw={redraw}
         triggerRedraw={triggerRedraw}
+        colorChange={colorChange}
+        triggerColorChange={triggerColorChange}
         coloringFunctionManager={coloringFunction}
         maxSeqLength={maxSeqLength}
         setMaxSeqLength={setMaxSeqLength}
@@ -219,6 +262,8 @@ function FractalApp() {
           mode={mode}
           redraw={redraw}
           triggerRedraw={triggerRedraw}
+          colorChange={colorChange}
+          triggerColorChange={triggerColorChange}
           coloringFunctionManager={coloringFunction}
           maxSeqLength={maxSeqLength}
           renderingFunctionManager={renderingFunctionManager}
@@ -226,7 +271,7 @@ function FractalApp() {
         <ColorWave
           coloringFunctionManager={coloringFunction}
           redraw={redraw}
-          triggerRedraw={triggerRedraw}
+          colorChange={colorChange}
           maxSeqLength={maxSeqLength}
         />
       </div>

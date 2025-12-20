@@ -1,8 +1,9 @@
 import  { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/Addons.js";
+import { color, max } from "three/tsl";
 
-export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLength }) {
+export default function ColorWave({ coloringFunctionManager, redraw,colorChange, maxSeqLength }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -10,7 +11,11 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
   const controlsRef = useRef(null);
   const curveRef = useRef(null);
 
+
   const r = 0.01;
+  const num_seg = 10
+
+
 
   const animate = () => {
     requestAnimationFrame(animate);
@@ -18,7 +23,7 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
     rendererRef.current.render(sceneRef.current, cameraRef.current);
   };
 
-   function addAxis(scene){
+  const addAxis = (scene) =>{
       let xmat = new THREE.LineBasicMaterial( {color:"red"});
       let xpoints = [new THREE.Vector3(0,0,0), new THREE.Vector3(1,0,0)]
       let xgeo = new THREE.BufferGeometry().setFromPoints(xpoints);
@@ -43,14 +48,24 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
   }
 
 
+
+  const computeCurvePositions = (r,num_seg) =>{
+    let P = []
+    for(let i = 0; i < maxSeqLength; i+=1){
+      P.push(coloringFunctionManager.current.eval(i))
+    }
+    return P
+  }
+
+
   const buildcurve = (r, num_seg) => {
     const group = new THREE.Group();
     const geo = new THREE.SphereGeometry(r, num_seg);
     const unboundedGeo = new THREE.BoxGeometry(2*r,2*r, 2*r)
-
+    const curvePositions = computeCurvePositions(r,num_seg)
     for (let i = 0; i < maxSeqLength; i += 1) {
       let g =null
-      const [c1, c2, c3] = coloringFunctionManager.current.eval(i);
+      const [c1, c2, c3] = curvePositions[i]
       if(c1 > 255 || c2 > 255 || c3 > 255){
         g = unboundedGeo
       }
@@ -102,7 +117,7 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
     addAxis(sceneRef)
 
     // Add initial curve
-    const curve = buildcurve(r, 10);
+    const curve = buildcurve(r, num_seg);
     scene.add(curve);
     curveRef.current = curve;
 
@@ -128,11 +143,11 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
     };
   }, []);
 
-  // Redraw effect
+
+  // Redraw effect - removes curve entirely
   useEffect(() => {
     if (!sceneRef.current) return;
 
-    // Remove old curve
     if (curveRef.current) {
       sceneRef.current.remove(curveRef.current);
       curveRef.current.traverse((child) => {
@@ -142,10 +157,47 @@ export default function ColorWave({ coloringFunctionManager, redraw, maxSeqLengt
     }
 
     // Add new curve
-    const newCurve = buildcurve(r, 10);
+    const newCurve = buildcurve(r, num_seg);
     sceneRef.current.add(newCurve);
     curveRef.current = newCurve;
+
   }, [redraw, maxSeqLength]);
+
+
+useEffect(() => {
+  if (!sceneRef.current) return;
+
+  const targetPositions = computeCurvePositions(r, num_seg);
+  for(let i=0;i<targetPositions.length;i+=1){
+    targetPositions[i] = new THREE.Vector3(targetPositions[i][0]/255, targetPositions[i][1]/255, targetPositions[i][2]/255)
+  }
+  
+  const duration = 0.5;
+  const start = performance.now();
+  const initialPositions = curveRef.current.children.map((s) => s.position.clone());
+
+
+  console.log(curveRef.current.children)
+  const animateCurveMotion = () => {
+    const now = performance.now();
+    const t = Math.min((now - start) / (duration * 1000), 1);
+
+    curveRef.current.children.forEach((sphere, i) => {
+      sphere.position.lerpVectors(initialPositions[i], targetPositions[i], t);
+      let [r,g,b] = sphere.position
+      sphere.material.color.r = r 
+      sphere.material.color.g = g 
+      sphere.material.color.b = b 
+      
+
+    });
+
+    if (t < 1) requestAnimationFrame(animateCurveMotion);
+  };
+
+  requestAnimationFrame(animateCurveMotion);
+  
+}, [colorChange]);
 
   return <div ref={mountRef} style={{ width: "600px", height: "400px" }} />;
 }

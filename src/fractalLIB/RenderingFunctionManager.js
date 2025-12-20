@@ -20,7 +20,7 @@ class RenderingFunctionManager {
       },
       3: function toad(z) {
         const real = z.real;
-        z.real = real ** 3 - z.img ** 3;
+        z.real = (real**2-z.img**3) + (z.img ** 2 - real**3);
         z.img = 3 * real * z.img;
       },
     };

@@ -2,6 +2,15 @@ class ColoringFunctionManager {
   //Allows coloring functions to be selected and inverted
 
   constructor() {
+
+    this.names = [
+      "watermelon",
+      "unnamed 1",
+      "unnamed 2",
+      "?",
+      "domer"
+    ]
+    
     this.coloringFunctions = {
       0: function Watermelon(t) {
         return [
@@ -34,6 +43,13 @@ class ColoringFunctionManager {
           21 * parseInt(t % 7),
         ];
       },
+      4: function linear(t){
+        return [
+          parseInt(t * 6),
+          parseInt(100 * Math.abs(Math.cos(6 * t))),
+          parseInt(100 * Math.abs(Math.sin(6 * t)))
+        ]
+      }
     };
 
     this.inversion_state = 0;
