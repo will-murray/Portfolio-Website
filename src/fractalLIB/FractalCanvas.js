@@ -1,9 +1,10 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, use } from "react";
 import Complex from "./Complex.js";
 import * as Conversion from "./Conversion.js";
 import { ColoringFunctionManager } from "./ColoringFunctionManager.js";
 import { RenderingFunctionManager } from "./RenderingFunctionManager.js";
 import ColorWave from "../colorwave.js";
+import { or } from "three/tsl";
 
 function FractalCanvas({
   mode,
@@ -11,21 +12,24 @@ function FractalCanvas({
   redraw,
   colorChange,
   maxSeqLength,
+  keyPressed,
   renderingFunctionManager,
 }) {
   // Canvas level params
   const canvasRef = useRef(null);
   const size = 500;
   const span = 0.5;
-  const origin = [-1, 0];
+  let origin = [-1, 0];
   const inc = span / size;
+  const keyPressStep = 10 // number of pixels to move per key press
 
   const [cursX, setCursx] = useState(0);
   const [cursY, setCursy] = useState(0);
   //Coloring functions manager - this needs to be shared with the 3D colorwave visualizer
 
   const linearIndex = (x, y) => y * size * 4 + 4 * x;
-  const juliaSet = (x, y) => {
+  
+  const juliaSet = (x, y, writeToCanvas = true) => {
     setCursx(x);
     setCursy(y);
     const canvas = canvasRef.current;
@@ -73,10 +77,14 @@ function FractalCanvas({
         }
       }
     }
-    ctx.putImageData(imgData, 0, 0);
+    if(writeToCanvas){
+      ctx.putImageData(imgData, 0, 0);
+    }else{
+      return imgData
+    }
   };
 
-  const mandelbrotSet = () => {
+  const mandelbrotSet = (writeToCanvas = true) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -87,7 +95,7 @@ function FractalCanvas({
       for (let j = origin[1] - span; j < origin[1] + span; j += inc * 2) {
         let c = new Complex(i, j);
         let result = sequenceLengthIter(new Complex(0, 0), c, 0);
-
+        
         if (result !== maxSeqLength) {
           let px = Conversion.complexToPixels(i, j, span, size, origin);
           let k = linearIndex(px[0], px[1]);
@@ -101,7 +109,12 @@ function FractalCanvas({
         }
       }
     }
-    ctx.putImageData(imgData, 10, 10);
+    if(writeToCanvas){
+      ctx.putImageData(imgData, 0, 0);
+    }else{
+      return imgData
+    }
+
   };
 
   const sequenceLengthIter = (z, c, iteration) => {
@@ -120,11 +133,64 @@ function FractalCanvas({
   }, [mode, redraw, maxSeqLength, cursX, cursY]);
 
   useEffect(() =>{
-    if (mode === 0) juliaSet(cursX, cursY);
-    else mandelbrotSet();
+    const ctx = canvasRef.current.getContext("2d", { willReadFrequently: true });
+    const initialImgData = ctx.getImageData(0,0,size,size)
+    let targetImgData = null
+    if (mode === 0){
+      targetImgData = juliaSet(cursX, cursY, false); 
+    }else{
+      targetImgData = mandelbrotSet(false);
+    }
+
+    ctx.putImageData(targetImgData,0,0)
+      
+    const duration = 0.5;
+    const start = performance.now();
+
+    const lerpVectors = (v1, v2, alpha) => {
+      return {
+        x: v1[0] + (v2[0] - v1[0]) * alpha,
+        y: v1[1] + (v2[1] - v1[1]) * alpha,
+        z: v1[2] + (v2[2] - v1[2]) * alpha
+      };
+    }
+
+    const animateColorChange = () =>{
+
+      let currentImgData = ctx.getImageData(0,0,size,size)
+      const now = performance.now();
+      const t = Math.min((now - start) / (duration * 1000), 1);
+      for(let i = 0;i<targetImgData.data.length;i +=4){
+        let c = lerpVectors(
+          [initialImgData.data[i], initialImgData.data[i+1], initialImgData.data[i+2]],
+          [targetImgData.data[i], targetImgData.data[i+1], targetImgData.data[i+2]],
+          t
+          
+        )
+        currentImgData.data[i] = c.x
+        currentImgData.data[i+1] = c.y
+        currentImgData.data[i+2] = c.z
+        currentImgData.data[i+3] = 255
+        
+        
+        
+      }
+      ctx.putImageData(currentImgData, 0, 0);
+
+      if(t < 1){
+        requestAnimationFrame(animateColorChange)
+      }
+    
+    }
+
+    requestAnimationFrame(animateColorChange)
 
 
   },[colorChange])
+
+
+
+
   return (
     <canvas
       ref={canvasRef}
@@ -235,14 +301,18 @@ function FractalController({
   );
 }
 
-function FractalApp() {
+function FractalApp({keyPressed}) {
   const [redraw, triggerRedraw] = useState(0);
   const [colorChange, triggerColorChange] = useState(0)
-  const [mode, setMode] = useState(0);
+  const [mode, setMode] = useState(1);
   const coloringFunction = useRef(new ColoringFunctionManager());
   const [maxSeqLength, setMaxSeqLength] = useState(100);
   const renderingFunctionManager = useRef(new RenderingFunctionManager());
 
+
+  useEffect(() =>{
+    console.log(keyPressed)
+  },[keyPressed])
   return (
     <div>
       <FractalController
@@ -257,8 +327,9 @@ function FractalApp() {
         setMaxSeqLength={setMaxSeqLength}
         renderingFunctionManager={renderingFunctionManager}
       />
-      <div id="theGoodStuff">
-        <FractalCanvas
+      <div  id="theGoodStuff"  style={{backgroundColor:"black", padding:"20px",borderRadius:"30px"}}>
+        <div style={{border:"solid",borderColor:"grey", margin:"5px"}}>
+          <FractalCanvas 
           mode={mode}
           redraw={redraw}
           triggerRedraw={triggerRedraw}
@@ -267,14 +338,22 @@ function FractalApp() {
           coloringFunctionManager={coloringFunction}
           maxSeqLength={maxSeqLength}
           renderingFunctionManager={renderingFunctionManager}
-        />
-        <ColorWave
-          coloringFunctionManager={coloringFunction}
-          redraw={redraw}
-          colorChange={colorChange}
-          maxSeqLength={maxSeqLength}
-        />
-      </div>
+          keyPressed={keyPressed}
+          />
+        </div >
+
+        <div style={{border:"solid",borderColor:"grey", margin:"5px"}}>
+          <ColorWave
+            coloringFunctionManager={coloringFunction}
+            redraw={redraw}
+            colorChange={colorChange}
+            maxSeqLength={maxSeqLength}
+          />
+
+        </div>
+          
+        </div>        
+        
     </div>
   );
 }

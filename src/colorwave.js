@@ -164,6 +164,7 @@ export default function ColorWave({ coloringFunctionManager, redraw,colorChange,
   }, [redraw, maxSeqLength]);
 
 
+
 useEffect(() => {
   if (!sceneRef.current) return;
 
@@ -177,7 +178,6 @@ useEffect(() => {
   const initialPositions = curveRef.current.children.map((s) => s.position.clone());
 
 
-  console.log(curveRef.current.children)
   const animateCurveMotion = () => {
     const now = performance.now();
     const t = Math.min((now - start) / (duration * 1000), 1);
