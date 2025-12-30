@@ -18,8 +18,8 @@ function FractalCanvas({
   // Canvas level params
   const canvasRef = useRef(null);
   const size = 500;
-  const span = 0.5;
-  let origin = [-1, 0];
+  const span = 0.1;
+  let origin = [-1, -0.3];
   const inc = span / size;
   const keyPressStep = 10 // number of pixels to move per key press
 
@@ -241,7 +241,7 @@ function FractalController({
 
   const changeRenderingFunction = () => {
     renderingFunctionManager.current.next_state();
-    triggerRedraw(() => redraw + 1);
+    triggerColorChange(() => colorChange + 1);
   };
 
   const modeName = () =>{
