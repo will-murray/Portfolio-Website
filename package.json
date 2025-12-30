@@ -15,7 +15,7 @@
     "three": "^0.182.0",
     "web-vitals": "^2.1.4"
   },
-  "homepage": "https://<your-username>.github.io/<repo-name>",
+  "homepage": "https://will-murray.github.io/<repo-name>",
 
   "scripts": {
     "start": "react-scripts start",
